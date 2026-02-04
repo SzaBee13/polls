@@ -44,3 +44,9 @@ The function:
 - Marks the bank poll as `used_at = now()`
 
 See `supabase/functions/select-daily-poll/README.md` for required env vars and the suggested cron.
+
+## Poll suggestions + admin review
+
+- Users can submit suggestions at `/suggest` (stored in the active DB table `poll_suggestions`).
+- Admin review is at `/admin` (UI checks `VITE_ADMIN_EMAIL`, but the Edge Function enforces admin server-side).
+- To enable admin actions, set the Edge Function env var `ADMIN_EMAIL` (defaults to `miabajodlol@gmail.com` if not set).

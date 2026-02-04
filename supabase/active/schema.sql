@@ -133,5 +133,53 @@ on public.votes
 for insert
 with check (auth.role() = 'authenticated' and auth.uid() = user_id);
 
--- Never allow client updates/deletes on votes or vote_counts
+create table if not exists public.poll_suggestions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  question text not null,
+  options jsonb not null check (jsonb_typeof(options) = 'array' and jsonb_array_length(options) >= 2),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  bank_poll_id uuid null,
+  decided_by uuid null references auth.users(id) on delete set null,
+  decided_at timestamptz null,
+  decision_reason text null,
+  created_at timestamptz not null default now()
+);
 
+create or replace function public.prepare_poll_suggestion()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  new.user_id := auth.uid();
+  new.status := 'pending';
+  new.bank_poll_id := null;
+  new.decided_by := null;
+  new.decided_at := null;
+  new.decision_reason := null;
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_prepare_poll_suggestion on public.poll_suggestions;
+create trigger trg_prepare_poll_suggestion
+before insert on public.poll_suggestions
+for each row execute function public.prepare_poll_suggestion();
+
+alter table public.poll_suggestions enable row level security;
+
+drop policy if exists "user_insert_suggestion" on public.poll_suggestions;
+create policy "user_insert_suggestion"
+on public.poll_suggestions
+for insert
+with check (auth.role() = 'authenticated' and auth.uid() = user_id);
+
+drop policy if exists "user_read_own_suggestions" on public.poll_suggestions;
+create policy "user_read_own_suggestions"
+on public.poll_suggestions
+for select
+using (auth.uid() = user_id);
+
+-- Never allow client updates/deletes on votes or vote_counts

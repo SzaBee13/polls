@@ -23,6 +23,9 @@ lerna-debug.log*
 !.env.example
 database-passwords.txt
 
+# TypeScript build info
+.tsconfig.*.tsbuildinfo
+
 # Common secret file types
 *.pem
 *.key

@@ -16,6 +16,36 @@ function utcDateId(date = new Date()): string {
   return `${y}-${m}-${d}`
 }
 
+type AdminListBody = {
+  action: 'adminListSuggestions'
+  status?: 'pending' | 'approved' | 'rejected'
+  limit?: number
+}
+
+type ReviewSuggestionBody = {
+  action: 'reviewSuggestion'
+  suggestionId: string
+  decision: 'approve' | 'reject'
+  reason?: string | null
+}
+
+type ActionBody = AdminListBody | ReviewSuggestionBody | { action?: 'selectDaily' } | Record<string, unknown>
+
+async function requireAdminEmail(
+  active: ReturnType<typeof createClient>,
+  req: Request,
+  adminEmail: string,
+): Promise<{ ok: true; userId: string } | { ok: false; status: number; error: string }> {
+  const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
+  if (!token) return { ok: false, status: 401, error: 'Missing Authorization bearer token' }
+
+  const userRes = await active.auth.getUser(token)
+  const email = (userRes.data.user?.email ?? '').toLowerCase()
+  if (!email || email !== adminEmail.toLowerCase()) return { ok: false, status: 403, error: 'Not authorized' }
+
+  return { ok: true, userId: userRes.data.user!.id }
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = {
     'access-control-allow-origin': '*',
@@ -31,17 +61,185 @@ Deno.serve(async (req) => {
 
   const bankUrl = Deno.env.get('BANK_SUPABASE_URL')
   const bankServiceRoleKey = Deno.env.get('BANK_SUPABASE_SERVICE_ROLE_KEY')
-  if (!bankUrl || !bankServiceRoleKey) {
-    return new Response(
-      JSON.stringify({ error: 'Missing BANK_SUPABASE_URL / BANK_SUPABASE_SERVICE_ROLE_KEY' }),
-      { status: 500, headers: { ...corsHeaders, 'content-type': 'application/json' } },
-    )
-  }
 
   const active = createClient(activeUrl, activeServiceRoleKey)
-  const bank = createClient(bankUrl, bankServiceRoleKey)
+  const adminEmail = Deno.env.get('ADMIN_EMAIL') ?? 'miabajodlol@gmail.com'
+
+  let body: ActionBody | null = null
+  try {
+    body = (await req.json()) as ActionBody
+  } catch {
+    body = null
+  }
+
+  const action = typeof body?.action === 'string' ? body.action : 'selectDaily'
+
+  if (action === 'adminListSuggestions') {
+    const authz = await requireAdminEmail(active, req, adminEmail)
+    if (!authz.ok) {
+      return new Response(JSON.stringify({ error: authz.error }), {
+        status: authz.status,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
+
+    const status = (body as AdminListBody).status ?? 'pending'
+    const limit = Math.min(200, Math.max(1, (body as AdminListBody).limit ?? 50))
+
+    const list = await active
+      .from('poll_suggestions')
+      .select('id,question,options,created_at,user_id')
+      .eq('status', status)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (list.error) {
+      return new Response(JSON.stringify({ error: list.error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
+
+    const items = (list.data ?? []).map((r) => ({
+      id: r.id,
+      question: r.question,
+      options: r.options,
+      created_at: r.created_at,
+      user_id: r.user_id,
+    }))
+
+    return new Response(JSON.stringify({ items }), {
+      headers: { ...corsHeaders, 'content-type': 'application/json' },
+    })
+  }
+
+  if (action === 'reviewSuggestion') {
+    if (!bankUrl || !bankServiceRoleKey) {
+      return new Response(
+        JSON.stringify({ error: 'Missing BANK_SUPABASE_URL / BANK_SUPABASE_SERVICE_ROLE_KEY' }),
+        { status: 500, headers: { ...corsHeaders, 'content-type': 'application/json' } },
+      )
+    }
+    const bank = createClient(bankUrl, bankServiceRoleKey)
+
+    const authz = await requireAdminEmail(active, req, adminEmail)
+    if (!authz.ok) {
+      return new Response(JSON.stringify({ error: authz.error }), {
+        status: authz.status,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
+
+    const b = body as ReviewSuggestionBody
+    if (!b.suggestionId || (b.decision !== 'approve' && b.decision !== 'reject')) {
+      return new Response(JSON.stringify({ error: 'Invalid body' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
+
+    const suggestionRes = await active
+      .from('poll_suggestions')
+      .select('id,status,question,options')
+      .eq('id', b.suggestionId)
+      .maybeSingle()
+
+    if (suggestionRes.error) {
+      return new Response(JSON.stringify({ error: suggestionRes.error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
+    const suggestion = suggestionRes.data
+    if (!suggestion) {
+      return new Response(JSON.stringify({ error: 'Suggestion not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
+
+    if (suggestion.status === 'approved' || suggestion.status === 'rejected') {
+      return new Response(JSON.stringify({ ok: true, alreadyDecided: true, suggestion }), {
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
+
+    if (b.decision === 'reject') {
+      const upd = await active
+        .from('poll_suggestions')
+        .update({
+          status: 'rejected',
+          decided_by: authz.userId,
+          decided_at: new Date().toISOString(),
+          decision_reason: (b.reason ?? null) || null,
+        })
+        .eq('id', suggestion.id)
+        .select('id,status,question,options,created_at,decision_reason,bank_poll_id')
+        .maybeSingle()
+
+      if (upd.error) {
+        return new Response(JSON.stringify({ error: upd.error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'content-type': 'application/json' },
+        })
+      }
+
+      return new Response(JSON.stringify({ ok: true, suggestion: upd.data }), {
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
+
+    const insert = await bank
+      .from('poll_bank')
+      .insert({
+        question: suggestion.question,
+        options: suggestion.options,
+        is_active: true,
+        used_at: null,
+      })
+      .select('id')
+      .maybeSingle()
+
+    if (insert.error) {
+      return new Response(JSON.stringify({ error: insert.error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
+
+    const upd = await active
+      .from('poll_suggestions')
+      .update({
+        status: 'approved',
+        bank_poll_id: insert.data?.id ?? null,
+        decided_by: authz.userId,
+        decided_at: new Date().toISOString(),
+        decision_reason: null,
+      })
+      .eq('id', suggestion.id)
+      .select('id,status,question,options,created_at,decision_reason,bank_poll_id')
+      .maybeSingle()
+
+    if (upd.error) {
+      return new Response(JSON.stringify({ error: upd.error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
+
+    return new Response(JSON.stringify({ ok: true, suggestion: upd.data }), {
+      headers: { ...corsHeaders, 'content-type': 'application/json' },
+    })
+  }
 
   const today = utcDateId()
+  if (!bankUrl || !bankServiceRoleKey) {
+    return new Response(JSON.stringify({ error: 'Missing BANK_SUPABASE_URL / BANK_SUPABASE_SERVICE_ROLE_KEY' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'content-type': 'application/json' },
+    })
+  }
+  const bank = createClient(bankUrl, bankServiceRoleKey)
 
   // Idempotent: if today exists, return it.
   const existing = await active
