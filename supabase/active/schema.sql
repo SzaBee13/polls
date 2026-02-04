@@ -212,7 +212,7 @@ security definer
 set search_path = public
 as $$
 begin
-  new.user_id := auth.uid();
+  new.user_id := coalesce(auth.uid(), new.user_id);
   new.status := 'pending';
   new.bank_poll_id := null;
   new.decided_by := null;

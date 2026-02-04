@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { HCaptcha } from '../components/HCaptcha'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../state/auth'
 
@@ -25,6 +26,7 @@ export function SuggestPage() {
   const { session, isLoading } = useAuth()
   const [question, setQuestion] = useState('')
   const [optionText, setOptionText] = useState('')
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [isBusy, setIsBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -103,23 +105,48 @@ export function SuggestPage() {
             </div>
           </label>
 
+          {import.meta.env.VITE_HCAPTCHA_SITE_KEY ? (
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="text-sm font-semibold">Human check</div>
+              <div className="mt-2">
+                <HCaptcha
+                  siteKey={import.meta.env.VITE_HCAPTCHA_SITE_KEY}
+                  onToken={(t) => setCaptchaToken(t)}
+                />
+              </div>
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
             <button
               className="rounded-xl bg-indigo-500 px-4 py-2 font-semibold text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={!canSubmit || isBusy}
+              disabled={
+                !canSubmit ||
+                isBusy ||
+                (Boolean(import.meta.env.VITE_HCAPTCHA_SITE_KEY) && !captchaToken)
+              }
               onClick={async () => {
                 setIsBusy(true)
                 setError(null)
                 setSuccess(null)
                 try {
-                  const { error: e } = await supabase.from('poll_suggestions').insert({
-                    user_id: session.user.id,
-                    question: question.trim(),
-                    options,
+                  if (import.meta.env.VITE_HCAPTCHA_SITE_KEY && !captchaToken) {
+                    throw new Error('Please complete the captcha.')
+                  }
+
+                  const { data, error: e } = await supabase.functions.invoke('select-daily-poll', {
+                    body: {
+                      action: 'submitSuggestion',
+                      question: question.trim(),
+                      options,
+                      captchaToken,
+                    },
                   })
                   if (e) throw e
+                  if (data?.error) throw new Error(String(data.error))
                   setQuestion('')
                   setOptionText('')
+                  setCaptchaToken(null)
                   setSuccess('Submitted! Thanks for making the internet worse.')
                   await loadMine()
                 } catch (err) {
@@ -150,6 +177,9 @@ export function SuggestPage() {
             <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-100">
               {success}
             </div>
+          ) : null}
+          {import.meta.env.VITE_HCAPTCHA_SITE_KEY ? (
+            <div className="text-xs text-slate-400">Protected by hCaptcha.</div>
           ) : null}
         </div>
       </div>

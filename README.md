@@ -50,3 +50,10 @@ See `supabase/functions/select-daily-poll/README.md` for required env vars and t
 - Users can submit suggestions at `/suggest` (stored in the active DB table `poll_suggestions`).
 - Admin review is at `/admin` (UI checks `VITE_ADMIN_EMAIL`, but the Edge Function enforces admin server-side).
 - To enable admin actions, set the Edge Function env var `ADMIN_EMAIL` (defaults to `miabajodlol@gmail.com` if not set).
+
+## hCaptcha (optional, recommended)
+
+To protect `/suggest` from bots:
+
+- Add `VITE_HCAPTCHA_SITE_KEY` to your app env (Vercel + local).
+- Add `HCAPTCHA_SECRET` to the **select-daily-poll** Edge Function env vars (active Supabase project).
