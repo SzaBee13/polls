@@ -2,9 +2,11 @@ import type { Factor } from '@supabase/supabase-js'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { ProfileRow } from '../lib/profile'
-import { getMyProfile } from '../lib/profile'
+import { getMyProfile, upsertMyProfile } from '../lib/profile'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../state/auth'
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024
 
 function sanitizeUsername(value: string): string {
   return value
@@ -21,6 +23,9 @@ export function SettingsPage() {
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarUploadUrl, setAvatarUploadUrl] = useState<string | null>(null)
+  const [isPublicProfile, setIsPublicProfile] = useState(true)
   const [isBusy, setIsBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -48,6 +53,12 @@ export function SettingsPage() {
     return true
   }, [newPassword, confirmPassword])
 
+  const avatarPreviewUrl = useMemo(() => {
+    if (avatarUploadUrl) return avatarUploadUrl
+    const fromInput = avatarUrl.trim()
+    return fromInput || '/logo.svg'
+  }, [avatarUploadUrl, avatarUrl])
+
   useEffect(() => {
     let mounted = true
     async function load() {
@@ -66,6 +77,7 @@ export function SettingsPage() {
             (session.user.user_metadata?.picture as string) ??
             '',
         )
+        setIsPublicProfile(p?.is_public ?? true)
       } catch (e) {
         setMessage(e instanceof Error ? e.message : String(e))
       }
@@ -87,16 +99,16 @@ export function SettingsPage() {
     void refreshFactors().catch((e) => setMessage(e instanceof Error ? e.message : String(e)))
   }, [session])
 
-  if (isLoading) return <div className="h-10 w-40 animate-pulse rounded bg-white/10" />
+  if (isLoading) return <div className="w-40 h-10 rounded animate-pulse bg-white/10" />
 
   if (!session) {
     return (
-      <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+      <div className="p-6 border rounded-2xl border-white/10 bg-black/20">
         <div className="text-lg font-semibold">Sign in required.</div>
         <div className="mt-3">
           <Link
             to="/auth"
-            className="inline-flex rounded-xl bg-indigo-500 px-4 py-2 font-semibold text-white hover:bg-indigo-400"
+            className="inline-flex px-4 py-2 font-semibold text-white bg-indigo-500 rounded-xl hover:bg-indigo-400"
           >
             Sign in
           </Link>
@@ -107,17 +119,17 @@ export function SettingsPage() {
 
   return (
     <div className="grid gap-6">
-      <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+      <div className="p-6 border rounded-2xl border-white/10 bg-black/20">
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="mt-1 text-sm text-slate-300">Update your public profile and security.</p>
 
-        <div className="mt-6 grid gap-3">
+        <div className="grid gap-3 mt-6">
           <label className="grid gap-1">
             <span className="text-sm text-slate-300">Display name</span>
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
-              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 outline-none ring-indigo-500/40 focus:ring-2"
+              className="px-3 py-2 border outline-none rounded-xl border-white/10 bg-black/30 ring-indigo-500/40 focus:ring-2"
               placeholder="Your name"
             />
           </label>
@@ -127,7 +139,7 @@ export function SettingsPage() {
             <input
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 outline-none ring-indigo-500/40 focus:ring-2"
+              className="px-3 py-2 border outline-none rounded-xl border-white/10 bg-black/30 ring-indigo-500/40 focus:ring-2"
               placeholder="e.g. cereal_soup_enjoyer"
             />
             <div className="text-xs text-slate-400">
@@ -141,28 +153,144 @@ export function SettingsPage() {
             <input
               value={avatarUrl}
               onChange={(e) => setAvatarUrl(e.target.value)}
-              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 outline-none ring-indigo-500/40 focus:ring-2"
+              className="px-3 py-2 border outline-none rounded-xl border-white/10 bg-black/30 ring-indigo-500/40 focus:ring-2"
               placeholder="https://…"
+            />
+            <div className="text-xs text-slate-400">
+              Or upload an image (max 5 MB).
+            </div>
+          </label>
+
+          <label className="flex items-start justify-between gap-4 p-4 border rounded-2xl border-white/10 bg-black/20">
+            <div>
+              <div className="text-sm font-semibold">Public profile</div>
+              <div className="mt-1 text-sm text-slate-300">
+                When off, your profile page and vote history are hidden from everyone else.
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              className="mt-1 h-5 w-5 accent-indigo-500"
+              checked={isPublicProfile}
+              onChange={(e) => setIsPublicProfile(e.target.checked)}
             />
           </label>
 
+          <div className="grid gap-2 p-4 border rounded-2xl border-white/10 bg-black/20">
+            <div className="flex items-center justify-between gap-3">
+              <div className="text-sm font-semibold">Upload profile picture</div>
+              <img
+                src={avatarPreviewUrl}
+                alt=""
+                className="object-cover w-10 h-10 border rounded-xl border-white/10 bg-black/30"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null
+                setAvatarUploadUrl(null)
+                setAvatarFile(f)
+              }}
+              className="text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-white/10 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-slate-100 hover:file:bg-white/15"
+            />
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="px-4 py-2 text-sm font-semibold text-white rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={
+                  isBusy ||
+                  !avatarFile ||
+                  avatarFile.size > MAX_AVATAR_BYTES ||
+                  !avatarFile.type.startsWith('image/')
+                }
+                onClick={async () => {
+                  if (!avatarFile) return
+                  setIsBusy(true)
+                  setMessage(null)
+                  try {
+                    if (avatarFile.size > MAX_AVATAR_BYTES) {
+                      throw new Error('File is larger than 5 MB.')
+                    }
+                    if (!avatarFile.type.startsWith('image/')) {
+                      throw new Error('File must be an image.')
+                    }
+
+                    const extFromName = avatarFile.name.split('.').pop()?.toLowerCase() ?? ''
+                    const ext =
+                      extFromName && extFromName.length <= 6
+                        ? extFromName
+                        : avatarFile.type.split('/').pop() ?? 'png'
+
+                    const path = `avatars/${session.user.id}/${Date.now()}.${ext}`
+
+                    const upload = await supabase.storage
+                      .from('profile-pictures')
+                      .upload(path, avatarFile, {
+                        cacheControl: '3600',
+                        upsert: true,
+                        contentType: avatarFile.type,
+                      })
+
+                    if (upload.error) throw upload.error
+
+                    const pub = supabase.storage.from('profile-pictures').getPublicUrl(path)
+                    const publicUrl = pub.data.publicUrl
+
+                    setAvatarUploadUrl(publicUrl)
+                    setAvatarUrl(publicUrl)
+                    setMessage('Uploaded. Don’t forget to hit Save.')
+                  } catch (e) {
+                    setMessage(
+                      e instanceof Error
+                        ? e.message
+                        : 'Upload failed. Make sure the bucket has policies that allow upload + read.',
+                    )
+                  } finally {
+                    setIsBusy(false)
+                  }
+                }}
+              >
+                Upload
+              </button>
+
+              <button
+                className="px-4 py-2 text-sm rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-60"
+                disabled={isBusy}
+                onClick={() => {
+                  setAvatarFile(null)
+                  setAvatarUploadUrl(null)
+                }}
+              >
+                Clear upload
+              </button>
+
+              {avatarFile && avatarFile.size > MAX_AVATAR_BYTES ? (
+                <div className="self-center text-sm text-amber-200">Max size is 5 MB.</div>
+              ) : null}
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <button
-              className="rounded-xl bg-indigo-500 px-4 py-2 font-semibold text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="px-4 py-2 font-semibold text-white bg-indigo-500 rounded-xl hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={!canSave || isBusy}
               onClick={async () => {
                 setIsBusy(true)
                 setMessage(null)
                 try {
                   const nextUsername = sanitizeUsername(username)
-                  const { error } = await supabase.from('profiles').upsert({
+                  await upsertMyProfile({
                     id: session.user.id,
                     username: nextUsername || null,
                     display_name: displayName.trim(),
                     avatar_url: avatarUrl.trim() || null,
+                    is_public: isPublicProfile,
                     updated_at: new Date().toISOString(),
                   })
-                  if (error) throw error
                   const next = await getMyProfile(session.user.id)
                   setProfile(next)
                   setMessage('Saved.')
@@ -179,7 +307,7 @@ export function SettingsPage() {
             {profile?.username ? (
               <Link
                 to={`/u/${profile.username}`}
-                className="rounded-xl bg-white/10 px-4 py-2 text-sm hover:bg-white/15"
+                className="px-4 py-2 text-sm rounded-xl bg-white/10 hover:bg-white/15"
               >
                 View profile
               </Link>
@@ -187,26 +315,26 @@ export function SettingsPage() {
           </div>
 
           {message ? (
-            <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-200">
+            <div className="px-3 py-2 text-sm border rounded-xl border-white/10 bg-black/30 text-slate-200">
               {message}
             </div>
           ) : null}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+      <div className="p-6 border rounded-2xl border-white/10 bg-black/20">
         <div className="text-lg font-semibold">Password</div>
         <div className="mt-1 text-sm text-slate-300">
           Set or change your password (minimum 8 characters).
         </div>
 
-        <div className="mt-6 grid gap-3">
+        <div className="grid gap-3 mt-6">
           <label className="grid gap-1">
             <span className="text-sm text-slate-300">New password</span>
             <input
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 outline-none ring-indigo-500/40 focus:ring-2"
+              className="px-3 py-2 border outline-none rounded-xl border-white/10 bg-black/30 ring-indigo-500/40 focus:ring-2"
               placeholder="At least 8 characters"
               type="password"
               autoComplete="new-password"
@@ -217,7 +345,7 @@ export function SettingsPage() {
             <input
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 outline-none ring-indigo-500/40 focus:ring-2"
+              className="px-3 py-2 border outline-none rounded-xl border-white/10 bg-black/30 ring-indigo-500/40 focus:ring-2"
               placeholder="Repeat password"
               type="password"
               autoComplete="new-password"
@@ -226,7 +354,7 @@ export function SettingsPage() {
 
           <div className="flex flex-wrap gap-2">
             <button
-              className="rounded-xl bg-indigo-500 px-4 py-2 font-semibold text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="px-4 py-2 font-semibold text-white bg-indigo-500 rounded-xl hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={!canChangePassword || isBusy}
               onClick={async () => {
                 setIsBusy(true)
@@ -248,7 +376,7 @@ export function SettingsPage() {
             </button>
 
             <button
-              className="rounded-xl bg-white/10 px-4 py-2 text-sm hover:bg-white/15 disabled:opacity-60"
+              className="px-4 py-2 text-sm rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-60"
               disabled={isBusy}
               onClick={() => {
                 setNewPassword('')
@@ -265,21 +393,21 @@ export function SettingsPage() {
           ) : null}
 
           {message ? (
-            <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-200">
+            <div className="px-3 py-2 text-sm border rounded-xl border-white/10 bg-black/30 text-slate-200">
               {message}
             </div>
           ) : null}
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+      <div className="p-6 border rounded-2xl border-white/10 bg-black/20">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-lg font-semibold">Two-factor auth (2FA)</div>
             <div className="text-sm text-slate-300">TOTP via an authenticator app.</div>
           </div>
           <button
-            className="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/15 disabled:opacity-60"
+            className="px-3 py-2 text-sm rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-60"
             disabled={isBusy}
             onClick={() =>
               void refreshFactors().catch((e) => setMessage(e instanceof Error ? e.message : String(e)))
@@ -289,7 +417,7 @@ export function SettingsPage() {
           </button>
         </div>
 
-        <div className="mt-4 grid gap-3">
+        <div className="grid gap-3 mt-4">
           {factors === null ? (
             <div className="text-sm text-slate-400">Loading…</div>
           ) : factors.length === 0 ? (
@@ -303,7 +431,7 @@ export function SettingsPage() {
 
           {!enrollFactorId ? (
             <button
-              className="w-fit rounded-xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 disabled:opacity-60"
+              className="px-4 py-2 text-sm font-semibold text-white w-fit rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60"
               disabled={isBusy}
               onClick={async () => {
                 setIsBusy(true)
@@ -329,7 +457,7 @@ export function SettingsPage() {
             <div className="grid gap-3">
               {enrollSvg ? (
                 <div
-                  className="w-fit rounded-xl border border-white/10 bg-white p-3"
+                  className="p-3 bg-white border w-fit rounded-xl border-white/10"
                   dangerouslySetInnerHTML={{ __html: enrollSvg }}
                 />
               ) : null}
@@ -338,14 +466,14 @@ export function SettingsPage() {
                 <input
                   value={verifyCode}
                   onChange={(e) => setVerifyCode(e.target.value)}
-                  className="w-48 rounded-xl border border-white/10 bg-black/30 px-3 py-2 outline-none ring-indigo-500/40 focus:ring-2"
+                  className="w-48 px-3 py-2 border outline-none rounded-xl border-white/10 bg-black/30 ring-indigo-500/40 focus:ring-2"
                   placeholder="123456"
                   inputMode="numeric"
                 />
               </label>
               <div className="flex flex-wrap gap-2">
                 <button
-                  className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-60"
+                  className="px-4 py-2 text-sm font-semibold text-white bg-indigo-500 rounded-xl hover:bg-indigo-400 disabled:opacity-60"
                   disabled={isBusy || verifyCode.trim().length < 6}
                   onClick={async () => {
                     setIsBusy(true)
@@ -374,7 +502,7 @@ export function SettingsPage() {
                   Verify
                 </button>
                 <button
-                  className="rounded-xl bg-white/10 px-4 py-2 text-sm hover:bg-white/15 disabled:opacity-60"
+                  className="px-4 py-2 text-sm rounded-xl bg-white/10 hover:bg-white/15 disabled:opacity-60"
                   disabled={isBusy}
                   onClick={() => {
                     setEnrollFactorId(null)

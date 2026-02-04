@@ -34,6 +34,7 @@ create table if not exists public.profiles (
   username text unique,
   display_name text,
   avatar_url text,
+  is_public boolean not null default true,
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
@@ -176,7 +177,7 @@ drop policy if exists "public_read_profiles" on public.profiles;
 create policy "public_read_profiles"
 on public.profiles
 for select
-using (true);
+using (is_public = true or auth.uid() = id);
 
 drop policy if exists "user_upsert_own_profile" on public.profiles;
 create policy "user_upsert_own_profile"
@@ -275,6 +276,17 @@ drop policy if exists "public_read_vote_history_after_day" on public.public_vote
 create policy "public_read_vote_history_after_day"
 on public.public_vote_history
 for select
-using (poll_date < (timezone('utc', now())::date));
+using (
+  auth.uid() = user_id
+  or (
+    poll_date < (timezone('utc', now())::date)
+    and exists (
+      select 1
+      from public.profiles p
+      where p.id = public_vote_history.user_id
+        and p.is_public = true
+    )
+  )
+);
 
 -- Never allow client updates/deletes on votes or vote_counts
