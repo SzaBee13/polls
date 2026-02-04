@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { HCaptcha } from '../components/HCaptcha'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../state/auth'
 
@@ -9,10 +10,12 @@ export function AuthPage() {
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null)
   const [isBusy, setIsBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
   const canSubmit = useMemo(() => email.trim().length > 3 && password.length >= 8, [email, password])
+  const captchaRequired = Boolean(import.meta.env.VITE_HCAPTCHA_SITE_KEY)
 
   if (session) {
     return (
@@ -45,14 +48,20 @@ export function AuthPage() {
           onClick={async () => {
             setIsBusy(true)
             setMessage(null)
+            if (captchaRequired && !captchaToken) {
+              setIsBusy(false)
+              setMessage('Please complete the captcha.')
+              return
+            }
             const { error } = await supabase.auth.signInWithOAuth({
               provider: 'google',
               options: { redirectTo: window.location.origin },
             })
             if (error) setMessage(error.message)
+            if (!error) setCaptchaToken(null)
             setIsBusy(false)
           }}
-          disabled={isBusy}
+          disabled={isBusy || (captchaRequired && !captchaToken)}
         >
           Continue with Google
         </button>
@@ -62,6 +71,18 @@ export function AuthPage() {
           <div className="text-xs text-slate-400">or</div>
           <div className="h-px flex-1 bg-white/10" />
         </div>
+
+        {import.meta.env.VITE_HCAPTCHA_SITE_KEY ? (
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+            <div className="text-sm font-semibold">Human check</div>
+            <div className="mt-2">
+              <HCaptcha
+                siteKey={import.meta.env.VITE_HCAPTCHA_SITE_KEY}
+                onToken={(t) => setCaptchaToken(t)}
+              />
+            </div>
+          </div>
+        ) : null}
 
         <label className="grid gap-1">
           <span className="text-sm text-slate-300">Email</span>
@@ -87,11 +108,14 @@ export function AuthPage() {
 
         <button
           className="mt-2 rounded-xl bg-indigo-500 px-4 py-2 font-semibold text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={!canSubmit || isBusy}
+          disabled={!canSubmit || isBusy || (captchaRequired && !captchaToken)}
           onClick={async () => {
             setIsBusy(true)
             setMessage(null)
             try {
+              if (captchaRequired && !captchaToken) {
+                throw new Error('Please complete the captcha.')
+              }
               if (mode === 'signIn') {
                 const { error } = await supabase.auth.signInWithPassword({ email, password })
                 if (error) throw error
@@ -100,6 +124,7 @@ export function AuthPage() {
                 if (error) throw error
                 setMessage('Check your email to confirm your account (if confirmations are enabled).')
               }
+              setCaptchaToken(null)
               navigate('/')
             } catch (e) {
               setMessage(e instanceof Error ? e.message : String(e))
