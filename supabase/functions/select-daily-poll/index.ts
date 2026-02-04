@@ -7,6 +7,8 @@ type BankPoll = {
   id: string
   question: string
   options: unknown
+  created_by_user_id?: string | null
+  created_by_display_name?: string | null
 }
 
 function utcDateId(date = new Date()): string {
@@ -30,6 +32,10 @@ type ReviewSuggestionBody = {
 }
 
 type ActionBody = AdminListBody | ReviewSuggestionBody | { action?: 'selectDaily' } | Record<string, unknown>
+
+function isMissingColumn(message: string): boolean {
+  return /column .* does not exist/i.test(message)
+}
 
 async function requireAdminEmail(
   active: ReturnType<typeof createClient>,
@@ -140,7 +146,7 @@ Deno.serve(async (req) => {
 
     const suggestionRes = await active
       .from('poll_suggestions')
-      .select('id,status,question,options')
+      .select('id,status,question,options,user_id')
       .eq('id', b.suggestionId)
       .maybeSingle()
 
@@ -150,7 +156,9 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, 'content-type': 'application/json' },
       })
     }
-    const suggestion = suggestionRes.data
+    const suggestion = suggestionRes.data as
+      | { id: string; status: string; question: string; options: unknown; user_id: string }
+      | null
     if (!suggestion) {
       return new Response(JSON.stringify({ error: 'Suggestion not found' }), {
         status: 404,
@@ -189,11 +197,25 @@ Deno.serve(async (req) => {
       })
     }
 
+    const profileRes = await active
+      .from('profiles')
+      .select('display_name,username')
+      .eq('id', suggestion.user_id)
+      .maybeSingle()
+
+    const createdByDisplayName =
+      (profileRes.data as { display_name?: string | null; username?: string | null } | null)?.
+        display_name ??
+      (profileRes.data as { display_name?: string | null; username?: string | null } | null)?.username ??
+      null
+
     const insert = await bank
       .from('poll_bank')
       .insert({
         question: suggestion.question,
         options: suggestion.options,
+        created_by_user_id: suggestion.user_id,
+        created_by_display_name: createdByDisplayName,
         is_active: true,
         used_at: null,
       })
@@ -201,6 +223,51 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     if (insert.error) {
+      // Back-compat: if bank schema wasn't migrated yet, retry insert without attribution columns.
+      if (isMissingColumn(insert.error.message)) {
+        const fallbackInsert = await bank
+          .from('poll_bank')
+          .insert({
+            question: suggestion.question,
+            options: suggestion.options,
+            is_active: true,
+            used_at: null,
+          })
+          .select('id')
+          .maybeSingle()
+
+        if (fallbackInsert.error) {
+          return new Response(JSON.stringify({ error: fallbackInsert.error.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'content-type': 'application/json' },
+          })
+        }
+
+        const upd = await active
+          .from('poll_suggestions')
+          .update({
+            status: 'approved',
+            bank_poll_id: fallbackInsert.data?.id ?? null,
+            decided_by: authz.userId,
+            decided_at: new Date().toISOString(),
+            decision_reason: null,
+          })
+          .eq('id', suggestion.id)
+          .select('id,status,question,options,created_at,decision_reason,bank_poll_id')
+          .maybeSingle()
+
+        if (upd.error) {
+          return new Response(JSON.stringify({ error: upd.error.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'content-type': 'application/json' },
+          })
+        }
+
+        return new Response(JSON.stringify({ ok: true, suggestion: upd.data }), {
+          headers: { ...corsHeaders, 'content-type': 'application/json' },
+        })
+      }
+
       return new Response(JSON.stringify({ error: insert.error.message }), {
         status: 500,
         headers: { ...corsHeaders, 'content-type': 'application/json' },
@@ -263,20 +330,34 @@ Deno.serve(async (req) => {
   // Pick a random unused poll.
   const pick = await bank
     .from('poll_bank')
-    .select('id,question,options')
+    .select('id,question,options,created_by_user_id,created_by_display_name')
     .eq('is_active', true)
     .is('used_at', null)
     .order('created_at', { ascending: true })
     .limit(200)
 
-  if (pick.error) {
-    return new Response(JSON.stringify({ error: pick.error.message }), {
+  let pickData = pick.data
+  let pickError = pick.error
+  if (pickError && isMissingColumn(pickError.message)) {
+    const fallbackPick = await bank
+      .from('poll_bank')
+      .select('id,question,options')
+      .eq('is_active', true)
+      .is('used_at', null)
+      .order('created_at', { ascending: true })
+      .limit(200)
+    pickData = fallbackPick.data
+    pickError = fallbackPick.error
+  }
+
+  if (pickError) {
+    return new Response(JSON.stringify({ error: pickError.message }), {
       status: 500,
       headers: { ...corsHeaders, 'content-type': 'application/json' },
     })
   }
 
-  const rows = (pick.data ?? []) as BankPoll[]
+  const rows = (pickData ?? []) as BankPoll[]
   if (rows.length === 0) {
     return new Response(JSON.stringify({ error: 'No unused polls in poll_bank' }), {
       status: 409,
@@ -290,15 +371,35 @@ Deno.serve(async (req) => {
     poll_date: today,
     question: chosen.question,
     options: chosen.options,
+    created_by_user_id: chosen.created_by_user_id ?? null,
+    created_by_display_name: chosen.created_by_display_name ?? null,
     source_project: 'bank',
     source_poll_id: chosen.id,
   })
 
   if (insertRes.error) {
-    return new Response(JSON.stringify({ error: insertRes.error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'content-type': 'application/json' },
-    })
+    // Back-compat: active DB might not have attribution columns yet.
+    if (isMissingColumn(insertRes.error.message)) {
+      const fallbackInsert = await active.from('daily_polls').insert({
+        poll_date: today,
+        question: chosen.question,
+        options: chosen.options,
+        source_project: 'bank',
+        source_poll_id: chosen.id,
+      })
+
+      if (fallbackInsert.error) {
+        return new Response(JSON.stringify({ error: fallbackInsert.error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'content-type': 'application/json' },
+        })
+      }
+    } else {
+      return new Response(JSON.stringify({ error: insertRes.error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      })
+    }
   }
 
   const markUsed = await bank

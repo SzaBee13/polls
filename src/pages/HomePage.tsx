@@ -9,6 +9,7 @@ type DailyPollRow = {
   poll_date: string
   question: string
   options: string[]
+  created_by_display_name?: string | null
 }
 
 type VoteRow = {
@@ -58,11 +59,28 @@ export function HomePage() {
       setMyVote(null)
       setResults(null)
 
-      const { data, error } = await supabase
+      const primary = await supabase
         .from('daily_polls')
-        .select('id,poll_date,question,options')
+        .select('id,poll_date,question,options,created_by_display_name')
         .eq('poll_date', today)
         .maybeSingle()
+
+      let data = primary.data as DailyPollRow | null
+      let error = primary.error
+
+      // Back-compat: if DB hasn't been migrated yet, retry without the attribution column.
+      if (error && /created_by_display_name|column .* does not exist/i.test(error.message)) {
+        const fallback = await supabase
+          .from('daily_polls')
+          .select('id,poll_date,question,options')
+          .eq('poll_date', today)
+          .maybeSingle()
+        data = (fallback.data as DailyPollRow | null) && {
+          ...(fallback.data as DailyPollRow),
+          created_by_display_name: 'Unknown',
+        }
+        error = fallback.error
+      }
 
       if (!isMounted) return
       if (error) {
@@ -213,6 +231,11 @@ export function HomePage() {
         <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
           <div className="text-sm text-slate-300">Daily poll</div>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">{poll.question}</h1>
+          {poll.created_by_display_name ? (
+            <div className="mt-2 text-sm text-slate-300">
+              Created by <span className="font-semibold text-slate-100">{poll.created_by_display_name}</span>
+            </div>
+          ) : null}
 
           {voteError ? (
             <div className="mt-4 rounded-xl border border-red-500/30 bg-red-950/20 px-3 py-2 text-sm text-red-200">
