@@ -24,6 +24,9 @@ export function SettingsPage() {
   const [isBusy, setIsBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
   const [factors, setFactors] = useState<Factor[] | null>(null)
   const [enrollSvg, setEnrollSvg] = useState<string | null>(null)
   const [enrollFactorId, setEnrollFactorId] = useState<string | null>(null)
@@ -35,6 +38,15 @@ export function SettingsPage() {
       (username.trim().length === 0 || sanitizeUsername(username).length >= 3),
     [displayName, username],
   )
+
+  const canChangePassword = useMemo(() => {
+    const p1 = newPassword.trim()
+    const p2 = confirmPassword.trim()
+    if (!p1 || !p2) return false
+    if (p1 !== p2) return false
+    if (p1.length < 8) return false
+    return true
+  }, [newPassword, confirmPassword])
 
   useEffect(() => {
     let mounted = true
@@ -183,6 +195,84 @@ export function SettingsPage() {
       </div>
 
       <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+        <div className="text-lg font-semibold">Password</div>
+        <div className="mt-1 text-sm text-slate-300">
+          Set or change your password (minimum 8 characters).
+        </div>
+
+        <div className="mt-6 grid gap-3">
+          <label className="grid gap-1">
+            <span className="text-sm text-slate-300">New password</span>
+            <input
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 outline-none ring-indigo-500/40 focus:ring-2"
+              placeholder="At least 8 characters"
+              type="password"
+              autoComplete="new-password"
+            />
+          </label>
+          <label className="grid gap-1">
+            <span className="text-sm text-slate-300">Confirm new password</span>
+            <input
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 outline-none ring-indigo-500/40 focus:ring-2"
+              placeholder="Repeat password"
+              type="password"
+              autoComplete="new-password"
+            />
+          </label>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="rounded-xl bg-indigo-500 px-4 py-2 font-semibold text-white hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!canChangePassword || isBusy}
+              onClick={async () => {
+                setIsBusy(true)
+                setMessage(null)
+                try {
+                  const { error } = await supabase.auth.updateUser({ password: newPassword.trim() })
+                  if (error) throw error
+                  setNewPassword('')
+                  setConfirmPassword('')
+                  setMessage('Password updated.')
+                } catch (e) {
+                  setMessage(e instanceof Error ? e.message : String(e))
+                } finally {
+                  setIsBusy(false)
+                }
+              }}
+            >
+              Change password
+            </button>
+
+            <button
+              className="rounded-xl bg-white/10 px-4 py-2 text-sm hover:bg-white/15 disabled:opacity-60"
+              disabled={isBusy}
+              onClick={() => {
+                setNewPassword('')
+                setConfirmPassword('')
+                setMessage(null)
+              }}
+            >
+              Clear
+            </button>
+          </div>
+
+          {newPassword.trim() && confirmPassword.trim() && newPassword.trim() !== confirmPassword.trim() ? (
+            <div className="text-sm text-amber-200">Passwords don’t match.</div>
+          ) : null}
+
+          {message ? (
+            <div className="rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-slate-200">
+              {message}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="text-lg font-semibold">Two-factor auth (2FA)</div>
@@ -303,4 +393,3 @@ export function SettingsPage() {
     </div>
   )
 }
-
