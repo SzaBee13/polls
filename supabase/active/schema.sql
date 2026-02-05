@@ -6,11 +6,17 @@ create table if not exists public.daily_polls (
   question text not null,
   options jsonb not null check (jsonb_typeof(options) = 'array' and jsonb_array_length(options) >= 2),
   created_by_user_id uuid null,
+  created_by_username text null,
   created_by_display_name text null,
   source_project text null,
   source_poll_id uuid null,
   created_at timestamptz not null default now()
 );
+
+-- Back-compat for existing tables (create table if not exists does not add new columns)
+alter table public.daily_polls add column if not exists created_by_user_id uuid null;
+alter table public.daily_polls add column if not exists created_by_username text null;
+alter table public.daily_polls add column if not exists created_by_display_name text null;
 
 create table if not exists public.votes (
   id uuid primary key default gen_random_uuid(),
@@ -38,6 +44,8 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now(),
   created_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists is_public boolean not null default true;
 
 create or replace function public.handle_new_user()
 returns trigger

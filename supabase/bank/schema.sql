@@ -5,11 +5,16 @@ create table if not exists public.poll_bank (
   question text not null,
   options jsonb not null check (jsonb_typeof(options) = 'array' and jsonb_array_length(options) >= 2),
   created_by_user_id uuid null,
+  created_by_username text null,
   created_by_display_name text null,
   is_active boolean not null default true,
   used_at timestamptz null,
   created_at timestamptz not null default now()
 );
+
+alter table public.poll_bank add column if not exists created_by_user_id uuid null;
+alter table public.poll_bank add column if not exists created_by_username text null;
+alter table public.poll_bank add column if not exists created_by_display_name text null;
 
 alter table public.poll_bank enable row level security;
 

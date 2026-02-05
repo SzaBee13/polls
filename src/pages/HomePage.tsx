@@ -9,6 +9,8 @@ type DailyPollRow = {
   poll_date: string
   question: string
   options: string[]
+  created_by_user_id?: string | null
+  created_by_username?: string | null
   created_by_display_name?: string | null
 }
 
@@ -39,6 +41,9 @@ export function HomePage() {
 
   const [results, setResults] = useState<ResultRow[] | null>(null)
   const [countdown, setCountdown] = useState('00:00:00')
+  const [creator, setCreator] = useState<{ username: string | null; displayName: string | null } | null>(
+    null,
+  )
 
   const today = useMemo(() => utcDateId(), [])
 
@@ -58,10 +63,11 @@ export function HomePage() {
       setPoll(null)
       setMyVote(null)
       setResults(null)
+      setCreator(null)
 
       const primary = await supabase
         .from('daily_polls')
-        .select('id,poll_date,question,options,created_by_display_name')
+        .select('id,poll_date,question,options,created_by_user_id,created_by_username,created_by_display_name')
         .eq('poll_date', today)
         .maybeSingle()
 
@@ -69,7 +75,7 @@ export function HomePage() {
       let error = primary.error
 
       // Back-compat: if DB hasn't been migrated yet, retry without the attribution column.
-      if (error && /created_by_display_name|column .* does not exist/i.test(error.message)) {
+      if (error && /(created_by_display_name|created_by_username|created_by_user_id|column .* does not exist)/i.test(error.message)) {
         const fallback = await supabase
           .from('daily_polls')
           .select('id,poll_date,question,options')
@@ -78,6 +84,8 @@ export function HomePage() {
         data = (fallback.data as DailyPollRow | null) && {
           ...(fallback.data as DailyPollRow),
           created_by_display_name: 'Unknown',
+          created_by_username: null,
+          created_by_user_id: null,
         }
         error = fallback.error
       }
@@ -104,6 +112,44 @@ export function HomePage() {
       isMounted = false
     }
   }, [today])
+
+  useEffect(() => {
+    let mounted = true
+    async function loadCreator() {
+      if (!poll?.created_by_user_id) {
+        setCreator(null)
+        return
+      }
+
+      // Prefer live profile privacy over stored fields.
+      const res = await supabase
+        .from('profiles')
+        .select('username,display_name,is_public')
+        .eq('id', poll.created_by_user_id)
+        .maybeSingle()
+
+      if (!mounted) return
+      if (res.error) {
+        setCreator(null)
+        return
+      }
+
+      const p = res.data as { username?: string | null; display_name?: string | null; is_public?: boolean | null } | null
+      if (!p || p.is_public === false) {
+        setCreator(null)
+        return
+      }
+
+      setCreator({
+        username: p.username ?? poll.created_by_username ?? null,
+        displayName: p.display_name ?? poll.created_by_display_name ?? null,
+      })
+    }
+    void loadCreator()
+    return () => {
+      mounted = false
+    }
+  }, [poll])
 
   useEffect(() => {
     let isMounted = true
@@ -231,11 +277,21 @@ export function HomePage() {
         <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
           <div className="text-sm text-slate-300">Daily poll</div>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight">{poll.question}</h1>
-          {poll.created_by_display_name ? (
-            <div className="mt-2 text-sm text-slate-300">
-              Created by <span className="font-semibold text-slate-100">{poll.created_by_display_name}</span>
-            </div>
-          ) : null}
+          <div className="mt-2 text-sm text-slate-300">
+            Created by{' '}
+            {creator?.username ? (
+              <Link
+                to={`/u/${creator.username}`}
+                className="font-semibold text-slate-100 hover:underline"
+              >
+                {creator.displayName ?? `@${creator.username}`}
+              </Link>
+            ) : creator?.displayName ? (
+              <span className="font-semibold text-slate-100">{creator.displayName}</span>
+            ) : (
+              <span className="font-semibold text-slate-100">Unknown</span>
+            )}
+          </div>
 
           {voteError ? (
             <div className="mt-4 rounded-xl border border-red-500/30 bg-red-950/20 px-3 py-2 text-sm text-red-200">

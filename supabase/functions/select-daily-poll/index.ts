@@ -8,6 +8,7 @@ type BankPoll = {
   question: string
   options: unknown
   created_by_user_id?: string | null
+  created_by_username?: string | null
   created_by_display_name?: string | null
 }
 
@@ -302,15 +303,19 @@ Deno.serve(async (req) => {
 
     const profileRes = await active
       .from('profiles')
-      .select('display_name,username')
+      .select('display_name,username,is_public')
       .eq('id', suggestion.user_id)
       .maybeSingle()
 
-    const createdByDisplayName =
-      (profileRes.data as { display_name?: string | null; username?: string | null } | null)?.
-        display_name ??
-      (profileRes.data as { display_name?: string | null; username?: string | null } | null)?.username ??
-      null
+    const profileData = profileRes.data as
+      | { display_name?: string | null; username?: string | null; is_public?: boolean | null }
+      | null
+
+    const isPublic = profileData?.is_public ?? true
+    const createdByUsername = isPublic ? profileData?.username ?? null : null
+    const createdByDisplayName = isPublic
+      ? profileData?.display_name ?? profileData?.username ?? null
+      : null
 
     const insert = await bank
       .from('poll_bank')
@@ -318,6 +323,7 @@ Deno.serve(async (req) => {
         question: suggestion.question,
         options: suggestion.options,
         created_by_user_id: suggestion.user_id,
+        created_by_username: createdByUsername,
         created_by_display_name: createdByDisplayName,
         is_active: true,
         used_at: null,
@@ -433,7 +439,7 @@ Deno.serve(async (req) => {
   // Pick a random unused poll.
   const pick = await bank
     .from('poll_bank')
-    .select('id,question,options,created_by_user_id,created_by_display_name')
+    .select('id,question,options,created_by_user_id,created_by_username,created_by_display_name')
     .eq('is_active', true)
     .is('used_at', null)
     .order('created_at', { ascending: true })
@@ -475,6 +481,7 @@ Deno.serve(async (req) => {
     question: chosen.question,
     options: chosen.options,
     created_by_user_id: chosen.created_by_user_id ?? null,
+    created_by_username: chosen.created_by_username ?? null,
     created_by_display_name: chosen.created_by_display_name ?? null,
     source_project: 'bank',
     source_poll_id: chosen.id,
