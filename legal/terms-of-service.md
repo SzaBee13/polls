@@ -1,8 +1,8 @@
 # Terms of Service
 
-**Effective date:** [EFFECTIVE_DATE]
+**Effective date:** 2026-02-07 (yyyy-mm-dd)
 
-These Terms of Service (“**Terms**”) govern your access to and use of **Polls That Shouldn’t Exist** (the “**Service**”), including the website at **[WEBSITE_URL]**, operated by **[OPERATOR_LEGAL_NAME]** (“**we**”, “**us**”, “**our**”).
+These Terms of Service (“**Terms**”) govern your access to and use of **Polls That Shouldn’t Exist** (the “**Service**”), including the website at **[Website](https://randompolls.vercel.app)**, operated by **SzaBee13**.
 
 By accessing or using the Service, you agree to these Terms. If you do not agree, do not use the Service.
 
@@ -12,7 +12,7 @@ You must be at least the age of digital consent in your country/region to use th
 
 ## 2) Accounts and authentication
 
-To vote or submit poll suggestions, you must create an account. Authentication is provided via Supabase (email/password and/or OAuth providers such as Google).
+To vote or submit poll suggestions, you must create an account. Authentication is provided via [Supabase](https://supabase.com) (email/password and/or OAuth providers such as Google).
 
 You are responsible for safeguarding your account and for all activity under it.
 
@@ -77,7 +77,7 @@ OUR AGGREGATE LIABILITY FOR ALL CLAIMS RELATING TO THE SERVICE WILL NOT EXCEED T
 
 ## 13) Indemnification
 
-You agree to defend, indemnify, and hold harmless [OPERATOR_LEGAL_NAME] from and against claims, damages, liabilities, and expenses arising out of your use of the Service or your violation of these Terms.
+You agree to defend, indemnify, and hold harmless SzaBee13 from and against claims, damages, liabilities, and expenses arising out of your use of the Service or your violation of these Terms.
 
 ## 14) Changes to these Terms
 

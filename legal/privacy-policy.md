@@ -1,8 +1,8 @@
 # Privacy Policy
 
-**Effective date:** [EFFECTIVE_DATE]
+**Effective date:** 2026-02-07 (yyyy-mm-dd)
 
-This Privacy Policy explains how **[OPERATOR_LEGAL_NAME]** (“**we**”, “**us**”, “**our**”) collects, uses, shares, and protects information when you use **Polls That Shouldn’t Exist** (the “**Service**”) at **[WEBSITE_URL]**.
+This Privacy Policy explains how **SzaBee13** collects, uses, shares, and protects information when you use **Polls That Shouldn’t Exist** (the “**Service**”) at **[Website](https://randompolls.vercel.app)**.
 
 If you do not agree with this Privacy Policy, do not use the Service.
 
@@ -104,7 +104,4 @@ We may update this policy from time to time. We will update the “Effective dat
 
 Privacy questions or requests:
 
-- **Email:** [CONTACT_EMAIL]  
-- **Address:** [OPERATOR_ADDRESS]  
-- **Privacy contact (optional):** [DPO_OR_PRIVACY_CONTACT]
-
+- **Email:** [here](mailto:szabee13.proton.me) 
