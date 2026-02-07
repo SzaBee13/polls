@@ -41,6 +41,17 @@ export function AuthPage() {
       <p className="mt-1 text-sm text-slate-300">
         Vote once per day. Email+password or Google.
       </p>
+      <p className="mt-2 text-xs text-slate-400">
+        By continuing, you agree to our{' '}
+        <a className="underline hover:no-underline" href="/terms">
+          Terms
+        </a>{' '}
+        and acknowledge our{' '}
+        <a className="underline hover:no-underline" href="/privacy">
+          Privacy Policy
+        </a>
+        .
+      </p>
 
       <div className="mt-6 grid gap-3">
         <button

@@ -6,6 +6,8 @@ import { SuggestPage } from './pages/SuggestPage'
 import { AdminPage } from './pages/AdminPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { TermsPage } from './pages/TermsPage'
+import { PrivacyPage } from './pages/PrivacyPage'
 
 export default function App() {
   return (
@@ -16,6 +18,8 @@ export default function App() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/u/:username" element={<ProfilePage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

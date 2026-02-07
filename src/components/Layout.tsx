@@ -149,7 +149,17 @@ export function Layout() {
       </main>
 
       <footer className="mx-auto max-w-4xl px-4 pb-10 text-xs text-slate-400">
-        Resets at midnight UTC. One vote per account, per poll.
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>Resets at midnight UTC. One vote per account, per poll.</span>
+          <span className="text-white/20">·</span>
+          <Link className="hover:underline" to="/privacy">
+            Privacy
+          </Link>
+          <span className="text-white/20">·</span>
+          <Link className="hover:underline" to="/terms">
+            Terms
+          </Link>
+        </div>
       </footer>
     </div>
   )

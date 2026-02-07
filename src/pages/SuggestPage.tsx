@@ -80,6 +80,17 @@ export function SuggestPage() {
         <p className="mt-1 text-sm text-slate-300">
           Keep it weird. If approved, it gets added to the poll bank.
         </p>
+        <p className="mt-2 text-xs text-slate-400">
+          By submitting, you agree to our{' '}
+          <a className="underline hover:no-underline" href="/terms">
+            Terms
+          </a>{' '}
+          and acknowledge our{' '}
+          <a className="underline hover:no-underline" href="/privacy">
+            Privacy Policy
+          </a>
+          .
+        </p>
 
         <div className="mt-6 grid gap-3">
           <label className="grid gap-1">
