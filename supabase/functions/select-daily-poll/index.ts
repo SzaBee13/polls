@@ -53,16 +53,38 @@ function isMissingColumn(message: string): boolean {
 async function requireAdminEmail(
   active: ReturnType<typeof createClient>,
   req: Request,
-  adminEmail: string,
+  adminEmails: string[],
 ): Promise<{ ok: true; userId: string } | { ok: false; status: number; error: string }> {
   const token = req.headers.get('Authorization')?.replace('Bearer ', '') ?? ''
   if (!token) return { ok: false, status: 401, error: 'Missing Authorization bearer token' }
 
   const userRes = await active.auth.getUser(token)
   const email = (userRes.data.user?.email ?? '').toLowerCase()
-  if (!email || email !== adminEmail.toLowerCase()) return { ok: false, status: 403, error: 'Not authorized' }
+  const allowed = adminEmails.map((e) => e.toLowerCase()).includes(email)
+  if (!email || !allowed) return { ok: false, status: 403, error: 'Not authorized' }
 
   return { ok: true, userId: userRes.data.user!.id }
+}
+
+function getAdminEmailsFromEnv(): string[] {
+  const candidates = [
+    Deno.env.get('ADMIN_EMAIL'),
+    Deno.env.get('ADMIN_EMAIL_2'),
+    Deno.env.get('ADMIN_EMAIL_3'),
+    Deno.env.get('ADMIN_EMAIL_4'),
+    Deno.env.get('ADMIN_EMAIL_5'),
+    Deno.env.get('ADMIN_EMAIL_6'),
+    Deno.env.get('ADMIN_EMAIL_7'),
+    Deno.env.get('ADMIN_EMAIL_8'),
+    Deno.env.get('ADMIN_EMAIL_9'),
+    Deno.env.get('ADMIN_EMAIL_10'),
+  ]
+
+  const list = candidates
+    .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
+    .filter(Boolean)
+
+  return list.length > 0 ? list : ['miabajodlol@gmail.com']
 }
 
 Deno.serve(async (req) => {
@@ -82,7 +104,7 @@ Deno.serve(async (req) => {
   const bankServiceRoleKey = Deno.env.get('BANK_SUPABASE_SERVICE_ROLE_KEY')
 
   const active = createClient(activeUrl, activeServiceRoleKey)
-  const adminEmail = Deno.env.get('ADMIN_EMAIL') ?? 'miabajodlol@gmail.com'
+  const adminEmails = getAdminEmailsFromEnv()
   const hcaptchaSecret = Deno.env.get('HCAPTCHA_SECRET') ?? null
 
   let body: ActionBody | null = null
@@ -185,7 +207,7 @@ Deno.serve(async (req) => {
   }
 
   if (action === 'adminListSuggestions') {
-    const authz = await requireAdminEmail(active, req, adminEmail)
+    const authz = await requireAdminEmail(active, req, adminEmails)
     if (!authz.ok) {
       return new Response(JSON.stringify({ error: authz.error }), {
         status: authz.status,
@@ -232,7 +254,7 @@ Deno.serve(async (req) => {
     }
     const bank = createClient(bankUrl, bankServiceRoleKey)
 
-    const authz = await requireAdminEmail(active, req, adminEmail)
+    const authz = await requireAdminEmail(active, req, adminEmails)
     if (!authz.ok) {
       return new Response(JSON.stringify({ error: authz.error }), {
         status: authz.status,
