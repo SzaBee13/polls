@@ -24,8 +24,8 @@ export function AdminPage() {
     setIsBusy(true)
     setError(null)
     try {
-      const { data, error: e } = await supabase.functions.invoke('select-daily-poll', {
-        body: { action: 'adminListSuggestions', status: 'pending', limit: 50 },
+      const { data, error: e } = await supabase.functions.invoke('admin-suggestions', {
+        body: { status: 'pending', limit: 50 },
       })
       if (e) throw e
       setItems((data?.items as PendingSuggestion[]) ?? [])
@@ -116,8 +116,8 @@ export function AdminPage() {
                       setIsBusy(true)
                       setError(null)
                       try {
-                        const { error: e } = await supabase.functions.invoke('select-daily-poll', {
-                          body: { action: 'reviewSuggestion', suggestionId: s.id, decision: 'approve' },
+                        const { error: e } = await supabase.functions.invoke('review-suggestion', {
+                          body: { suggestionId: s.id, decision: 'approve' },
                         })
                         if (e) throw e
                         await load()
@@ -138,9 +138,8 @@ export function AdminPage() {
                       setIsBusy(true)
                       setError(null)
                       try {
-                        const { error: e } = await supabase.functions.invoke('select-daily-poll', {
+                        const { error: e } = await supabase.functions.invoke('review-suggestion', {
                           body: {
-                            action: 'reviewSuggestion',
                             suggestionId: s.id,
                             decision: 'reject',
                             reason: reason.trim() || null,

@@ -56,4 +56,4 @@ See `supabase/functions/select-daily-poll/README.md` for required env vars and t
 To protect `/suggest` from bots:
 
 - Add `VITE_HCAPTCHA_SITE_KEY` to your app env (Vercel + local).
-- Add `HCAPTCHA_SECRET` to the **select-daily-poll** Edge Function env vars (active Supabase project).
+- Add `HCAPTCHA_SECRET` to the **submit-suggestion** Edge Function env vars (active Supabase project).

@@ -145,9 +145,8 @@ export function SuggestPage() {
                     throw new Error('Please complete the captcha.')
                   }
 
-                  const { data, error: e } = await supabase.functions.invoke('select-daily-poll', {
+                  const { data, error: e } = await supabase.functions.invoke('submit-suggestion', {
                     body: {
-                      action: 'submitSuggestion',
                       question: question.trim(),
                       options,
                       captchaToken,
