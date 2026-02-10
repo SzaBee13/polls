@@ -26,7 +26,7 @@ function getAdminEmailsFromEnv(): string[] {
     .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
     .filter(Boolean)
 
-  return list.length > 0 ? list : ['miabajodlol@gmail.com']
+  return list
 }
 
 async function requireAdmin(
@@ -38,6 +38,8 @@ async function requireAdmin(
   if (!token) return { ok: false, status: 401, error: 'Missing Authorization bearer token' }
 
   const userRes = await active.auth.getUser(token)
+  if (userRes.error) return { ok: false, status: 401, error: `Invalid session: ${userRes.error.message}` }
+
   const email = (userRes.data.user?.email ?? '').toLowerCase()
   if (!email || !adminEmails.includes(email)) return { ok: false, status: 403, error: 'Not authorized' }
 
@@ -56,6 +58,12 @@ Deno.serve(async (req) => {
   const activeServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const active = createClient(activeUrl, activeServiceRoleKey)
   const adminEmails = getAdminEmailsFromEnv()
+  if (adminEmails.length === 0) {
+    return new Response(JSON.stringify({ error: 'Admin emails are not configured' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'content-type': 'application/json' },
+    })
+  }
 
   const authz = await requireAdmin(active, req, adminEmails)
   if (!authz.ok) {

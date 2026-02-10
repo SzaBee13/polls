@@ -49,7 +49,10 @@ See `supabase/functions/select-daily-poll/README.md` for required env vars and t
 
 - Users can submit suggestions at `/suggest` (stored in the active DB table `poll_suggestions`).
 - Admin review is at `/admin` (UI checks `VITE_ADMIN_EMAIL`, but the Edge Function enforces admin server-side).
-- To enable admin actions, set the Edge Function env var `ADMIN_EMAIL` (defaults to `miabajodlol@gmail.com` if not set).
+- To enable admin actions, set at least one admin email env var in both places:
+  - App env: `VITE_ADMIN_EMAIL` (or `VITE_ADMIN_EMAIL_2..10`)
+  - Edge Function env: `ADMIN_EMAIL` (or `ADMIN_EMAIL_2..10`)
+- If these vars are missing, admin access is disabled (fail-closed).
 
 ## hCaptcha (optional, recommended)
 
