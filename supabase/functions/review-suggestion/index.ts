@@ -32,7 +32,7 @@ function getAdminEmailsFromEnv(): string[] {
     .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
     .filter(Boolean)
 
-  return list.length > 0 ? list : ['miabajodlol@gmail.com']
+  return list
 }
 
 async function requireAdmin(
@@ -44,11 +44,44 @@ async function requireAdmin(
   if (!token) return { ok: false, status: 401, error: 'Missing Authorization bearer token' }
 
   const userRes = await active.auth.getUser(token)
+  if (userRes.error) return { ok: false, status: 401, error: `Invalid session: ${userRes.error.message}` }
+
   const user = userRes.data.user
   const email = (user?.email ?? '').toLowerCase()
   if (!email || !adminEmails.includes(email)) return { ok: false, status: 403, error: 'Not authorized' }
 
   return { ok: true, userId: user!.id }
+}
+
+
+async function updateSuggestionApproved(
+  active: ReturnType<typeof createClient>,
+  suggestionId: string,
+  bankPollId: string | null,
+  userId: string,
+) {
+  return active
+    .from('poll_suggestions')
+    .update({
+      status: 'approved',
+      bank_poll_id: bankPollId,
+      decided_by: userId,
+      decided_at: new Date().toISOString(),
+      decision_reason: null,
+    })
+    .eq('id', suggestionId)
+    .eq('status', 'pending')
+    .select('id,status,question,options,created_at,decision_reason,bank_poll_id')
+    .maybeSingle()
+}
+
+async function rollbackBankPoll(
+  bank: ReturnType<typeof createClient>,
+  bankPollId: string,
+): Promise<string | null> {
+  const rollback = await bank.from('poll_bank').delete().eq('id', bankPollId)
+  if (rollback.error) return rollback.error.message
+  return null
 }
 
 Deno.serve(async (req) => {
@@ -90,6 +123,12 @@ Deno.serve(async (req) => {
   const active = createClient(activeUrl, activeServiceRoleKey)
   const bank = createClient(bankUrl, bankServiceRoleKey)
   const adminEmails = getAdminEmailsFromEnv()
+  if (adminEmails.length === 0) {
+    return new Response(JSON.stringify({ error: 'Admin emails are not configured' }), {
+      status: 500,
+      headers: { ...corsHeaders, 'content-type': 'application/json' },
+    })
+  }
 
   const authz = await requireAdmin(active, req, adminEmails)
   if (!authz.ok) {
@@ -203,24 +242,23 @@ Deno.serve(async (req) => {
         })
       }
 
-      const upd = await active
-        .from('poll_suggestions')
-        .update({
-          status: 'approved',
-          bank_poll_id: fallbackInsert.data?.id ?? null,
-          decided_by: authz.userId,
-          decided_at: new Date().toISOString(),
-          decision_reason: null,
-        })
-        .eq('id', suggestion.id)
-        .select('id,status,question,options,created_at,decision_reason,bank_poll_id')
-        .maybeSingle()
+      const insertedBankPollId = fallbackInsert.data?.id ?? null
+      const upd = await updateSuggestionApproved(active, suggestion.id, insertedBankPollId, authz.userId)
 
-      if (upd.error) {
-        return new Response(JSON.stringify({ error: upd.error.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'content-type': 'application/json' },
-        })
+      if (upd.error || !upd.data) {
+        const rollbackMessage = insertedBankPollId ? await rollbackBankPoll(bank, insertedBankPollId) : null
+        const details = rollbackMessage
+          ? `; rollback failed: ${rollbackMessage}`
+          : '; inserted bank poll was rolled back'
+        return new Response(
+          JSON.stringify({
+            error: `Failed to mark suggestion approved after inserting bank poll${details}`,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, 'content-type': 'application/json' },
+          },
+        )
       }
 
       return new Response(JSON.stringify({ ok: true, suggestion: upd.data }), {
@@ -234,24 +272,23 @@ Deno.serve(async (req) => {
     })
   }
 
-  const upd = await active
-    .from('poll_suggestions')
-    .update({
-      status: 'approved',
-      bank_poll_id: insert.data?.id ?? null,
-      decided_by: authz.userId,
-      decided_at: new Date().toISOString(),
-      decision_reason: null,
-    })
-    .eq('id', suggestion.id)
-    .select('id,status,question,options,created_at,decision_reason,bank_poll_id')
-    .maybeSingle()
+  const insertedBankPollId = insert.data?.id ?? null
+  const upd = await updateSuggestionApproved(active, suggestion.id, insertedBankPollId, authz.userId)
 
-  if (upd.error) {
-    return new Response(JSON.stringify({ error: upd.error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, 'content-type': 'application/json' },
-    })
+  if (upd.error || !upd.data) {
+    const rollbackMessage = insertedBankPollId ? await rollbackBankPoll(bank, insertedBankPollId) : null
+    const details = rollbackMessage
+      ? `; rollback failed: ${rollbackMessage}`
+      : '; inserted bank poll was rolled back'
+    return new Response(
+      JSON.stringify({
+        error: `Failed to mark suggestion approved after inserting bank poll${details}`,
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, 'content-type': 'application/json' },
+      },
+    )
   }
 
   return new Response(JSON.stringify({ ok: true, suggestion: upd.data }), {

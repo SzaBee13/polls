@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { isAdmin } from '../lib/admin'
+import { isAdmin, isAdminEnvConfigured } from '../lib/admin'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../state/auth'
 
@@ -19,6 +19,7 @@ export function AdminPage() {
   const [error, setError] = useState<string | null>(null)
 
   const allowed = useMemo(() => isAdmin(session), [session])
+  const adminEnvConfigured = isAdminEnvConfigured()
 
   async function load() {
     setIsBusy(true)
@@ -41,6 +42,17 @@ export function AdminPage() {
   }, [allowed])
 
   if (isLoading) return <div className="h-10 w-40 animate-pulse rounded bg-white/10" />
+
+  if (!adminEnvConfigured) {
+    return (
+      <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-6">
+        <div className="text-lg font-semibold text-amber-200">Admin is not configured.</div>
+        <div className="mt-2 text-sm text-amber-100/90">
+          Set <code>VITE_ADMIN_EMAIL</code> (or numbered variants) in your environment to enable admin UI access.
+        </div>
+      </div>
+    )
+  }
 
   if (!session) {
     return (

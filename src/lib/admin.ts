@@ -1,7 +1,5 @@
 import type { Session } from '@supabase/supabase-js'
 
-const DEFAULT_ADMIN_EMAIL = 'miabajodlol@gmail.com'
-
 function getAdminEmailsFromEnv(): string[] {
   const candidates = [
     import.meta.env.VITE_ADMIN_EMAIL,
@@ -16,15 +14,21 @@ function getAdminEmailsFromEnv(): string[] {
     import.meta.env.VITE_ADMIN_EMAIL_10,
   ]
 
-  const list = candidates
+  return candidates
     .map((e) => (typeof e === 'string' ? e.trim().toLowerCase() : ''))
     .filter(Boolean)
-
-  return list.length > 0 ? list : [DEFAULT_ADMIN_EMAIL.toLowerCase()]
 }
 
 export function isAdmin(session: Session | null): boolean {
   const email = session?.user?.email ?? ''
+  if (!email) return false
+
   const admins = getAdminEmailsFromEnv()
+  if (admins.length === 0) return false
+
   return admins.includes(email.toLowerCase())
+}
+
+export function isAdminEnvConfigured(): boolean {
+  return getAdminEmailsFromEnv().length > 0
 }
