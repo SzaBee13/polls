@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://randompolls.vercel.app/sitemap.xml
