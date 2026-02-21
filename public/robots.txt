@@ -1,4 +1,58 @@
-User-agent: *
+# Search Engines - Google, Bing, Yahoo, etc.
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Slurp
+Allow: /
+Crawl-delay: 2
+
+User-agent: DuckDuckBot
+Allow: /
+Crawl-delay: 1
+
+# AI Search Bots & Crawlers
+User-agent: CCBot
+Allow: /
+Crawl-delay: 2
+
+User-agent: GPTBot
+Allow: /
+Crawl-delay: 2
+
+User-agent: ChatGPT-User
 Allow: /
 
+User-agent: Claude-Web
+Allow: /
+
+User-agent: Perplexity
+Allow: /
+
+User-agent: Anthropic-CustomerIO
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: linkedinbot
+Allow: /
+
+# All other bots
+User-agent: *
+Allow: /
+Crawl-delay: 2
+
+# Disallow admin paths (if they exist)
+Disallow: /api/admin
+Disallow: /admin
+
+# Sitemap location
 Sitemap: https://randompolls.vercel.app/sitemap.xml

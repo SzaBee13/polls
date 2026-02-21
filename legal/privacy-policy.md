@@ -9,33 +9,42 @@ If you do not agree with this Privacy Policy, do not use the Service.
 ## 1) Information we collect
 
 ### A) Account information
+
 When you create an account, we process:
+
 - email address
 - authentication identifiers (e.g., Supabase user ID)
 - OAuth provider data (e.g., Google profile name/photo), if you choose OAuth
 
 ### B) Profile information (optional)
+
 If you create or edit a profile, we may process:
+
 - username
 - display name
 - profile picture (avatar) URL or uploaded image
 - a “public profile” setting (public/private)
 
 ### C) Poll activity
+
 We process:
+
 - votes you cast (poll identifier, selected option, timestamps)
 - aggregate poll results (counts per option)
 - poll suggestions you submit (question/options) and moderation status
 
 ### D) Security and abuse-prevention data
+
 If enabled, we use hCaptcha to reduce abuse. hCaptcha may collect information as described in its own privacy policy, and we may process hCaptcha verification results (success/failure).
 
 ### E) Technical data
+
 We may process standard technical information such as IP address, device/browser information, and logs for security, debugging, and performance.
 
 ## 2) How we use information
 
 We use information to:
+
 - provide and operate the Service (sign-in, voting, showing results)
 - enforce “one vote per poll”
 - review and moderate poll suggestions
@@ -47,6 +56,7 @@ We use information to:
 ## 3) Public profiles and vote history
 
 If you enable a **public profile**, other users may be able to see:
+
 - your username and display name
 - your profile picture
 - your vote history **for past days**
@@ -73,16 +83,18 @@ You can request deletion as described below.
 ## 6) Your choices and rights
 
 Depending on your location, you may have rights to:
+
 - access, correct, or delete your personal data
 - object to or restrict processing
 - withdraw consent (where applicable)
 
 You can also:
+
 - set your profile to public/private (if available)
 - update your profile details
 - change your password and enable 2FA (if available)
 
-To make a request, contact us at **[CONTACT_EMAIL]**.
+To make a request, contact us **[here trough mail](mailto:szabee13.proton.me)**.
 
 ## 7) Security
 
@@ -104,4 +116,4 @@ We may update this policy from time to time. We will update the “Effective dat
 
 Privacy questions or requests:
 
-- **Email:** [here](mailto:szabee13.proton.me) 
+- **Email:** [SzaBee13](mailto:szabee13.proton.me)

@@ -11,13 +11,13 @@ function Section(props: { title: string; children: React.ReactNode }) {
 
 export function PrivacyPage() {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+    <div className="p-6 border rounded-2xl border-white/10 bg-black/20">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Privacy Policy</h1>
           <div className="mt-1 text-sm text-slate-400">Effective date: 2026-02-07</div>
         </div>
-        <Link to="/terms" className="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/15">
+        <Link to="/terms" className="px-3 py-2 text-sm rounded-xl bg-white/10 hover:bg-white/15">
           Terms of Service
         </Link>
       </div>
@@ -69,7 +69,7 @@ export function PrivacyPage() {
       </Section>
 
       <Section title="2) How we use information">
-        <ul className="list-disc space-y-1 pl-5">
+        <ul className="pl-5 space-y-1 list-disc">
           <li>provide and operate the Service (sign-in, voting, showing results)</li>
           <li>enforce “one vote per poll”</li>
           <li>review and moderate poll suggestions</li>
@@ -93,7 +93,7 @@ export function PrivacyPage() {
       </Section>
 
       <Section title="4) Sharing of information">
-        <ul className="list-disc space-y-2 pl-5">
+        <ul className="pl-5 space-y-2 list-disc">
           <li>
             <span className="font-semibold text-slate-100">Service providers</span> we use to run the Service (e.g.
             Supabase for authentication/database/storage; hCaptcha for abuse prevention; hosting providers).
@@ -146,11 +146,11 @@ export function PrivacyPage() {
 
       <Section title="11) Contact">
         Privacy questions or requests:
-        <ul className="mt-2 list-disc space-y-1 pl-5">
+        <ul className="pl-5 mt-2 space-y-1 list-disc">
           <li>
             <span className="font-semibold text-slate-100">Email:</span>{' '}
             <a className="underline hover:no-underline" href="mailto:szabee13.proton.me">
-              szabee13.proton.me
+              SzaBee13
             </a>
           </li>
         </ul>

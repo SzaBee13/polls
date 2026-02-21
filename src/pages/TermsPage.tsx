@@ -11,13 +11,13 @@ function Section(props: { title: string; children: React.ReactNode }) {
 
 export function TermsPage() {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+    <div className="p-6 border rounded-2xl border-white/10 bg-black/20">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Terms of Service</h1>
           <div className="mt-1 text-sm text-slate-400">Effective date: 2026-02-07</div>
         </div>
-        <Link to="/privacy" className="rounded-xl bg-white/10 px-3 py-2 text-sm hover:bg-white/15">
+        <Link to="/privacy" className="px-3 py-2 text-sm rounded-xl bg-white/10 hover:bg-white/15">
           Privacy Policy
         </Link>
       </div>
@@ -51,7 +51,7 @@ export function TermsPage() {
       </Section>
 
       <Section title="3) Polls, voting, and results">
-        <ul className="list-disc space-y-1 pl-5">
+        <ul className="pl-5 space-y-1 list-disc">
           <li>The Service provides daily polls that refresh at approximately 00:00 UTC.</li>
           <li>You may vote once per poll per account.</li>
           <li>We may change, suspend, or discontinue polls at any time.</li>
@@ -64,7 +64,7 @@ export function TermsPage() {
         worldwide, non-exclusive, royalty-free license to host, store, reproduce, modify, adapt, publish, and display
         that content for operating and improving the Service.
         <div className="mt-3">You are responsible for your submissions. Do not submit content that:</div>
-        <ul className="mt-2 list-disc space-y-1 pl-5">
+        <ul className="pl-5 mt-2 space-y-1 list-disc">
           <li>is illegal, defamatory, harassing, hateful, or violent</li>
           <li>infringes intellectual property rights</li>
           <li>includes personal data you do not have the right to share</li>
@@ -87,7 +87,7 @@ export function TermsPage() {
 
       <Section title="7) Acceptable use">
         You agree not to:
-        <ul className="mt-2 list-disc space-y-1 pl-5">
+        <ul className="pl-5 mt-2 space-y-1 list-disc">
           <li>
             interfere with or disrupt the Service (including rate limiting, scraping, or attempting to bypass
             protections such as CAPTCHA)
@@ -114,7 +114,7 @@ export function TermsPage() {
       </Section>
 
       <Section title="11) Disclaimers">
-        <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-xs text-slate-200">
+        <div className="px-4 py-3 font-mono text-xs border rounded-xl border-white/10 bg-black/30 text-slate-200">
           THE SERVICE IS PROVIDED “AS IS” AND “AS AVAILABLE.” TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE DISCLAIM ALL
           WARRANTIES, EXPRESS OR IMPLIED, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
           PURPOSE, AND NON-INFRINGEMENT.
@@ -125,12 +125,12 @@ export function TermsPage() {
       </Section>
 
       <Section title="12) Limitation of liability">
-        <div className="rounded-xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-xs text-slate-200">
+        <div className="px-4 py-3 font-mono text-xs border rounded-xl border-white/10 bg-black/30 text-slate-200">
           TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT WILL WE BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
           CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY LOSS OF PROFITS, REVENUES, DATA, OR GOODWILL, ARISING FROM OR
           RELATED TO YOUR USE OF THE SERVICE.
         </div>
-        <div className="mt-3 rounded-xl border border-white/10 bg-black/30 px-4 py-3 font-mono text-xs text-slate-200">
+        <div className="px-4 py-3 mt-3 font-mono text-xs border rounded-xl border-white/10 bg-black/30 text-slate-200">
           OUR AGGREGATE LIABILITY FOR ALL CLAIMS RELATING TO THE SERVICE WILL NOT EXCEED THE GREATER OF (A) USD $50 OR
           (B) THE AMOUNT YOU PAID US TO USE THE SERVICE IN THE 12 MONTHS BEFORE THE EVENT GIVING RISE TO THE CLAIM (IF
           ANY).
@@ -148,19 +148,14 @@ export function TermsPage() {
         acceptance.
       </Section>
 
-      <Section title="15) Governing law">
-        These Terms are governed by the laws of <span className="text-slate-100">[JURISDICTION]</span>, without regard
-        to conflict of law principles.
-      </Section>
-
-      <Section title="16) Contact">
+      <Section title="15) Contact">
         Questions about these Terms:
-        <ul className="mt-2 list-disc space-y-1 pl-5">
+        <ul className="pl-5 mt-2 space-y-1 list-disc">
           <li>
-            <span className="font-semibold text-slate-100">Email:</span> <span>[CONTACT_EMAIL]</span>
-          </li>
-          <li>
-            <span className="font-semibold text-slate-100">Address:</span> <span>[OPERATOR_ADDRESS]</span>
+            <span className="font-semibold text-slate-100">Email:</span>{' '}
+            <a className="underline hover:no-underline" href="mailto:szabee13.proton.me">
+              SzaBee13
+            </a>
           </li>
         </ul>
       </Section>

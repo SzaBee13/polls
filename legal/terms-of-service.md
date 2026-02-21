@@ -28,6 +28,7 @@ You are responsible for safeguarding your account and for all activity under it.
 You may submit poll suggestions (questions and answer options). By submitting content, you grant us a worldwide, non-exclusive, royalty-free license to host, store, reproduce, modify, adapt, publish, and display that content for operating and improving the Service.
 
 You are responsible for your submissions. Do not submit content that:
+
 - is illegal, defamatory, harassing, hateful, or violent
 - infringes intellectual property rights
 - includes personal data you do not have the right to share
@@ -46,6 +47,7 @@ If the Service offers a public profile feature, you can choose whether your prof
 ## 7) Acceptable use
 
 You agree not to:
+
 - interfere with or disrupt the Service (including rate limiting, scraping, or attempting to bypass protections such as CAPTCHA)
 - attempt unauthorized access to accounts, systems, or data
 - use the Service to violate laws or regulations
@@ -83,14 +85,8 @@ You agree to defend, indemnify, and hold harmless SzaBee13 from and against clai
 
 We may update these Terms from time to time. We will update the “Effective date” above and, when appropriate, provide additional notice. Your continued use of the Service after changes become effective constitutes acceptance.
 
-## 15) Governing law
-
-These Terms are governed by the laws of **[JURISDICTION]**, without regard to conflict of law principles.
-
-## 16) Contact
+## 15) Contact
 
 Questions about these Terms:
 
-- **Email:** [CONTACT_EMAIL]  
-- **Address:** [OPERATOR_ADDRESS]
-
+- **Email:** [SzaBee13](mailto:szabee13@proton.me)
