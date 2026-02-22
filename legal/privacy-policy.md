@@ -116,4 +116,4 @@ We may update this policy from time to time. We will update the “Effective dat
 
 Privacy questions or requests:
 
-- **Email:** [SzaBee13](mailto:szabee13.proton.me)
+- **Email:** [SzaBee13](mailto:me@szabee.me)

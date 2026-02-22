@@ -153,7 +153,7 @@ export function TermsPage() {
         <ul className="pl-5 mt-2 space-y-1 list-disc">
           <li>
             <span className="font-semibold text-slate-100">Email:</span>{' '}
-            <a className="underline hover:no-underline" href="mailto:szabee13.proton.me">
+            <a className="underline hover:no-underline" href="mailto:me@szabee.me">
               SzaBee13
             </a>
           </li>

@@ -89,4 +89,4 @@ We may update these Terms from time to time. We will update the “Effective dat
 
 Questions about these Terms:
 
-- **Email:** [SzaBee13](mailto:szabee13@proton.me)
+- **Email:** [SzaBee13](mailto:me@szabee.me)
