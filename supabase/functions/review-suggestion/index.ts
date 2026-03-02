@@ -1,6 +1,6 @@
 // Supabase Edge Function (deploy to the *active* project).
 // Admin action to approve/reject a poll suggestion.
-// Approve -> insert into bank project's poll_bank and mark suggestion approved.
+// Approve -> insert into active project's poll_bank and mark suggestion approved.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -76,10 +76,10 @@ async function updateSuggestionApproved(
 }
 
 async function rollbackBankPoll(
-  bank: ReturnType<typeof createClient>,
+  active: ReturnType<typeof createClient>,
   bankPollId: string,
 ): Promise<string | null> {
-  const rollback = await bank.from('poll_bank').delete().eq('id', bankPollId)
+  const rollback = await active.from('poll_bank').delete().eq('id', bankPollId)
   if (rollback.error) return rollback.error.message
   return null
 }
@@ -94,14 +94,6 @@ Deno.serve(async (req) => {
 
   const activeUrl = Deno.env.get('SUPABASE_URL')!
   const activeServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const bankUrl = Deno.env.get('BANK_SUPABASE_URL')
-  const bankServiceRoleKey = Deno.env.get('BANK_SUPABASE_SERVICE_ROLE_KEY')
-  if (!bankUrl || !bankServiceRoleKey) {
-    return new Response(JSON.stringify({ error: 'Missing BANK_SUPABASE_URL / BANK_SUPABASE_SERVICE_ROLE_KEY' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'content-type': 'application/json' },
-    })
-  }
 
   let body: Body
   try {
@@ -129,8 +121,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'content-type': 'application/json' },
     })
   }
-
-  const authz = await requireAdmin(active, req, adminEmails)
+authz = await requireAdmin(active, req, adminEmails)
   if (!authz.ok) {
     return new Response(JSON.stringify({ error: authz.error }), {
       status: authz.status,
@@ -216,24 +207,24 @@ Deno.serve(async (req) => {
       created_by_username: createdByUsername,
       created_by_display_name: createdByDisplayName,
       is_active: true,
+      used_at: null,active
+    .from('poll_bank')
+    .insert({
+      question: suggestion.question,
+      options: suggestion.options,
+      created_by_user_id: suggestion.user_id,
+      created_by_username: createdByUsername,
+      created_by_display_name: createdByDisplayName,
+      is_active: true,
       used_at: null,
     })
     .select('id')
     .maybeSingle()
 
   if (insert.error) {
-    // Back-compat: if bank schema wasn't migrated yet, retry insert without attribution columns.
+    // Back-compat: if active schema wasn't migrated yet, retry insert without attribution columns.
     if (isMissingColumn(insert.error.message)) {
-      const fallbackInsert = await bank
-        .from('poll_bank')
-        .insert({
-          question: suggestion.question,
-          options: suggestion.options,
-          is_active: true,
-          used_at: null,
-        })
-        .select('id')
-        .maybeSingle()
+      const fallbackInsert = await active
 
       if (fallbackInsert.error) {
         return new Response(JSON.stringify({ error: fallbackInsert.error.message }), {
@@ -247,7 +238,7 @@ Deno.serve(async (req) => {
 
       if (upd.error || !upd.data) {
         const rollbackMessage = insertedBankPollId ? await rollbackBankPoll(bank, insertedBankPollId) : null
-        const details = rollbackMessage
+        const details = rollbackMessageactive
           ? `; rollback failed: ${rollbackMessage}`
           : '; inserted bank poll was rolled back'
         return new Response(
@@ -277,7 +268,7 @@ Deno.serve(async (req) => {
 
   if (upd.error || !upd.data) {
     const rollbackMessage = insertedBankPollId ? await rollbackBankPoll(bank, insertedBankPollId) : null
-    const details = rollbackMessage
+    const details = rollbackMessageactive
       ? `; rollback failed: ${rollbackMessage}`
       : '; inserted bank poll was rolled back'
     return new Response(

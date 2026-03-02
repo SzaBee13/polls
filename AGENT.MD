@@ -34,7 +34,6 @@ Quick repo notes for coding agents.
   - Admins: `VITE_ADMIN_EMAIL` plus `VITE_ADMIN_EMAIL_2` ... `_10`
 - Edge Functions (active Supabase project):
   - Admins: `ADMIN_EMAIL` plus `ADMIN_EMAIL_2` ... `_10`
-  - Bank access: `BANK_SUPABASE_URL`, `BANK_SUPABASE_SERVICE_ROLE_KEY`
   - Captcha verify (optional): `HCAPTCHA_SECRET` (used by `submit-suggestion`)
 
 ## Supabase notes

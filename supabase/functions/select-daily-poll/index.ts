@@ -1,5 +1,5 @@
 // Supabase Edge Function (deploy to the *active* project).
-// Picks a poll from the bank project and inserts today's row into daily_polls (UTC date).
+// Picks a poll from the poll_bank table and inserts today's row into daily_polls (UTC date).
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -34,17 +34,7 @@ Deno.serve(async (req) => {
   const activeUrl = Deno.env.get('SUPABASE_URL')!
   const activeServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-  const bankUrl = Deno.env.get('BANK_SUPABASE_URL')
-  const bankServiceRoleKey = Deno.env.get('BANK_SUPABASE_SERVICE_ROLE_KEY')
-  if (!bankUrl || !bankServiceRoleKey) {
-    return new Response(JSON.stringify({ error: 'Missing BANK_SUPABASE_URL / BANK_SUPABASE_SERVICE_ROLE_KEY' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'content-type': 'application/json' },
-    })
-  }
-
   const active = createClient(activeUrl, activeServiceRoleKey)
-  const bank = createClient(bankUrl, bankServiceRoleKey)
 
   const today = utcDateId()
 
@@ -78,18 +68,18 @@ Deno.serve(async (req) => {
 
   let pickData = pick.data
   let pickError = pick.error
-  if (pickError && isMissingColumn(pickError.message)) {
-    const fallbackPick = await bank
-      .from('poll_bank')
-      .select('id,question,options')
-      .eq('is_active', true)
-      .is('used_at', null)
-      .order('created_at', { ascending: true })
-      .limit(200)
-    pickData = fallbackPick.data
-    pickError = fallbackPick.error
-  }
+  if (pickError && isactive
+    .from('poll_bank')
+    .select('id,question,options,created_by_user_id,created_by_username,created_by_display_name')
+    .eq('is_active', true)
+    .is('used_at', null)
+    .order('created_at', { ascending: true })
+    .limit(200)
 
+  let pickData = pick.data
+  let pickError = pick.error
+  if (pickError && isMissingColumn(pickError.message)) {
+    const fallbackPick = await active
   if (pickError) {
     return new Response(JSON.stringify({ error: pickError.message }), {
       status: 500,
@@ -125,7 +115,7 @@ Deno.serve(async (req) => {
         poll_date: today,
         question: chosen.question,
         options: chosen.options,
-        source_project: 'bank',
+        source_project: 'active',
         source_poll_id: chosen.id,
       })
 
@@ -143,7 +133,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  const markUsed = await bank
+  const markUsed = await active
     .from('poll_bank')
     .update({ used_at: new Date().toISOString() })
     .eq('id', chosen.id)
