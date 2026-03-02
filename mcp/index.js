@@ -23,16 +23,29 @@ dotenv.config({ path: join(__dirname, '.env') });
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const USERNAME = process.env.USERNAME || 'mcp-user';
 const DISPLAY_NAME = process.env.DISPLAY_NAME || 'MCP User';
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  console.error('Error: SUPABASE_URL and SUPABASE_ANON_KEY must be set in .env file');
+if (!SUPABASE_URL) {
+  console.error('Error: SUPABASE_URL must be set in .env file');
   process.exit(1);
 }
 
-// Initialize Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+if (!SUPABASE_ANON_KEY && !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Error: Either SUPABASE_ANON_KEY or SUPABASE_SERVICE_ROLE_KEY must be set in .env file');
+  process.exit(1);
+}
+
+// Initialize Supabase client - use service role key if available to bypass RLS
+const supabaseKey = SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY;
+const supabase = createClient(SUPABASE_URL, supabaseKey);
+
+if (SUPABASE_SERVICE_ROLE_KEY) {
+  console.error('Using service role key - RLS bypassed');
+} else {
+  console.error('Using anon key - RLS policies apply');
+}
 
 class PollsMCPServer {
   constructor() {

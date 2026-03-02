@@ -19,8 +19,8 @@ Location: `~/Library/Application Support/Claude/claude_desktop_config.json`
       "env": {
         "SUPABASE_URL": "https://izcfkwvregyollaxltbt.supabase.co",
         "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6Y2Zrd3ZyZWd5b2xsYXhsdGJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxODg5MTgsImV4cCI6MjA4NTc2NDkxOH0.FKEPBlva61G1s8eeWv8wIjG8qozIgB4wxhQf6P-wNG0",
-        "USERNAME": "szabee13",
-        "DISPLAY_NAME": "SzaBee13"
+        "USERNAME": "your_polls_username",
+        "DISPLAY_NAME": "Your Display Name"
       }
     }
   }
