@@ -1,0 +1,21 @@
+{
+  "name": "@polls/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for polls project - allows LLMs to create and manage polls",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "polls-mcp": "./index.js"
+  },
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@supabase/supabase-js": "^2.94.0",
+    "dotenv": "^16.4.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
