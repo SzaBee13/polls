@@ -57,8 +57,8 @@ Deno.serve(async (req) => {
     })
   }
 
-  // Pick a random unused poll.
-  const pick = await bank
+  // Pick a random unused poll from the poll_bank table in the active project.
+  const pick = await active
     .from('poll_bank')
     .select('id,question,options,created_by_user_id,created_by_username,created_by_display_name')
     .eq('is_active', true)
@@ -68,18 +68,21 @@ Deno.serve(async (req) => {
 
   let pickData = pick.data
   let pickError = pick.error
-  if (pickError && isactive
-    .from('poll_bank')
-    .select('id,question,options,created_by_user_id,created_by_username,created_by_display_name')
-    .eq('is_active', true)
-    .is('used_at', null)
-    .order('created_at', { ascending: true })
-    .limit(200)
 
-  let pickData = pick.data
-  let pickError = pick.error
   if (pickError && isMissingColumn(pickError.message)) {
+    // Back-compat: retry without attribution columns
     const fallbackPick = await active
+      .from('poll_bank')
+      .select('id,question,options')
+      .eq('is_active', true)
+      .is('used_at', null)
+      .order('created_at', { ascending: true })
+      .limit(200)
+
+    pickData = fallbackPick.data
+    pickError = fallbackPick.error
+  }
+
   if (pickError) {
     return new Response(JSON.stringify({ error: pickError.message }), {
       status: 500,
@@ -104,7 +107,7 @@ Deno.serve(async (req) => {
     created_by_user_id: chosen.created_by_user_id ?? null,
     created_by_username: chosen.created_by_username ?? null,
     created_by_display_name: chosen.created_by_display_name ?? null,
-    source_project: 'bank',
+    source_project: 'active',
     source_poll_id: chosen.id,
   })
 

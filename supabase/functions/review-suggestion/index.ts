@@ -113,7 +113,6 @@ Deno.serve(async (req) => {
   }
 
   const active = createClient(activeUrl, activeServiceRoleKey)
-  const bank = createClient(bankUrl, bankServiceRoleKey)
   const adminEmails = getAdminEmailsFromEnv()
   if (adminEmails.length === 0) {
     return new Response(JSON.stringify({ error: 'Admin emails are not configured' }), {
@@ -121,7 +120,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, 'content-type': 'application/json' },
     })
   }
-authz = await requireAdmin(active, req, adminEmails)
+
+  const authz = await requireAdmin(active, req, adminEmails)
   if (!authz.ok) {
     return new Response(JSON.stringify({ error: authz.error }), {
       status: authz.status,
@@ -198,16 +198,8 @@ authz = await requireAdmin(active, req, adminEmails)
     ? profileData?.display_name ?? profileData?.username ?? null
     : null
 
-  const insert = await bank
-    .from('poll_bank')
-    .insert({
-      question: suggestion.question,
-      options: suggestion.options,
-      created_by_user_id: suggestion.user_id,
-      created_by_username: createdByUsername,
-      created_by_display_name: createdByDisplayName,
-      is_active: true,
-      used_at: null,active
+  // Insert into poll_bank on the active (same) project.
+  const insert = await active
     .from('poll_bank')
     .insert({
       question: suggestion.question,
@@ -222,9 +214,18 @@ authz = await requireAdmin(active, req, adminEmails)
     .maybeSingle()
 
   if (insert.error) {
-    // Back-compat: if active schema wasn't migrated yet, retry insert without attribution columns.
+    // Back-compat: if schema wasn't migrated yet, retry without attribution columns.
     if (isMissingColumn(insert.error.message)) {
       const fallbackInsert = await active
+        .from('poll_bank')
+        .insert({
+          question: suggestion.question,
+          options: suggestion.options,
+          is_active: true,
+          used_at: null,
+        })
+        .select('id')
+        .maybeSingle()
 
       if (fallbackInsert.error) {
         return new Response(JSON.stringify({ error: fallbackInsert.error.message }), {
@@ -237,8 +238,8 @@ authz = await requireAdmin(active, req, adminEmails)
       const upd = await updateSuggestionApproved(active, suggestion.id, insertedBankPollId, authz.userId)
 
       if (upd.error || !upd.data) {
-        const rollbackMessage = insertedBankPollId ? await rollbackBankPoll(bank, insertedBankPollId) : null
-        const details = rollbackMessageactive
+        const rollbackMessage = insertedBankPollId ? await rollbackBankPoll(active, insertedBankPollId) : null
+        const details = rollbackMessage
           ? `; rollback failed: ${rollbackMessage}`
           : '; inserted bank poll was rolled back'
         return new Response(
@@ -267,8 +268,8 @@ authz = await requireAdmin(active, req, adminEmails)
   const upd = await updateSuggestionApproved(active, suggestion.id, insertedBankPollId, authz.userId)
 
   if (upd.error || !upd.data) {
-    const rollbackMessage = insertedBankPollId ? await rollbackBankPoll(bank, insertedBankPollId) : null
-    const details = rollbackMessageactive
+    const rollbackMessage = insertedBankPollId ? await rollbackBankPoll(active, insertedBankPollId) : null
+    const details = rollbackMessage
       ? `; rollback failed: ${rollbackMessage}`
       : '; inserted bank poll was rolled back'
     return new Response(
