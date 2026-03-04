@@ -22,6 +22,7 @@ export function SettingsPage() {
   const [profile, setProfile] = useState<ProfileRow | null>(null)
   const [username, setUsername] = useState('')
   const [displayName, setDisplayName] = useState('')
+  const [bio, setBio] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarUploadUrl, setAvatarUploadUrl] = useState<string | null>(null)
@@ -71,6 +72,7 @@ export function SettingsPage() {
         setDisplayName(
           p?.display_name ?? (session.user.user_metadata?.full_name as string) ?? 'Anonymous',
         )
+        setBio(p?.bio ?? '')
         setAvatarUrl(
           p?.avatar_url ??
             (session.user.user_metadata?.avatar_url as string) ??
@@ -146,6 +148,18 @@ export function SettingsPage() {
               Saved as:{' '}
               <span className="text-slate-200">{sanitizeUsername(username) || '(empty)'}</span>
             </div>
+          </label>
+
+          <label className="grid gap-1">
+            <span className="text-sm text-slate-300">Bio</span>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              className="px-3 py-2 border outline-none rounded-xl border-white/10 bg-black/30 ring-indigo-500/40 focus:ring-2 resize-none"
+              placeholder="Tell us about yourself"
+              rows={3}
+            />
+            <div className="text-xs text-slate-400">Max 256 characters.</div>
           </label>
 
           <label className="grid gap-1">
@@ -287,6 +301,7 @@ export function SettingsPage() {
                     id: session.user.id,
                     username: nextUsername || null,
                     display_name: displayName.trim(),
+                    bio: bio.trim().slice(0, 256) || null,
                     avatar_url: avatarUrl.trim() || null,
                     is_public: isPublicProfile,
                     updated_at: new Date().toISOString(),

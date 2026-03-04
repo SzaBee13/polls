@@ -26,6 +26,7 @@ const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const USERNAME = process.env.USERNAME || 'mcp-user';
 const DISPLAY_NAME = process.env.DISPLAY_NAME || 'MCP User';
+const USER_ID = process.env.USER_ID || 'mcp-user-id';
 
 if (!SUPABASE_URL) {
   console.error('Error: SUPABASE_URL must be set in .env file');
@@ -311,6 +312,7 @@ class PollsMCPServer {
         options,
         created_by_username: USERNAME,
         created_by_display_name: DISPLAY_NAME,
+        created_by_user_id: USER_ID,
         is_active: true,
       })
       .select()

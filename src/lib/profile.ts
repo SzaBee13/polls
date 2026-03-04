@@ -4,6 +4,7 @@ export type ProfileRow = {
   id: string
   username: string | null
   display_name: string | null
+  bio: string | null
   avatar_url: string | null
   is_public?: boolean | null
   created_at: string
@@ -13,7 +14,7 @@ export type ProfileRow = {
 export async function getMyProfile(userId: string): Promise<ProfileRow | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,username,display_name,avatar_url,is_public,created_at,updated_at')
+    .select('id,username,display_name,bio,avatar_url,is_public,created_at,updated_at')
     .eq('id', userId)
     .maybeSingle()
   if (error) throw error
@@ -23,7 +24,7 @@ export async function getMyProfile(userId: string): Promise<ProfileRow | null> {
 export async function getProfileByUsername(username: string): Promise<ProfileRow | null> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,username,display_name,avatar_url,is_public,created_at,updated_at')
+    .select('id,username,display_name,bio,avatar_url,is_public,created_at,updated_at')
     .eq('username', username)
     .maybeSingle()
   if (error) throw error
@@ -31,7 +32,7 @@ export async function getProfileByUsername(username: string): Promise<ProfileRow
 }
 
 export async function upsertMyProfile(
-  row: Pick<ProfileRow, 'id' | 'username' | 'display_name' | 'avatar_url'> & {
+  row: Pick<ProfileRow, 'id' | 'username' | 'display_name' | 'bio' | 'avatar_url'> & {
     is_public?: boolean | null
     updated_at: string
   },
